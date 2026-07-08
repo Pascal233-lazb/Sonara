@@ -1,0 +1,42 @@
+name: Build iOS IPA (Unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Installation des dépendances
+        run: npm install
+
+      - name: Génération des fichiers natifs iOS
+        run: npx expo prebuild --platform ios
+
+      - name: Compilation de l'application
+        run: |
+          cd ios
+          xcodebuild -workspace Sonara.xcworkspace -scheme Sonara -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Transformation en .ipa
+        run: |
+          mkdir -p build/Payload
+          cp -r ios/build/Release-iphoneos/Sonara.app build/Payload/
+          cd build
+          zip -r Sonara.ipa Payload
+
+      - name: Telecharger le fichier IPA final
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sonara-iOS-Unsigned
+          path: build/Sonara.ipa
